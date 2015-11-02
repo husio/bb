@@ -84,24 +84,26 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	store := NewStore(DB(ctx))
 
-	olderThan, lim := paginate(r.URL.Query(), 50)
-	topics, err := store.Topics(olderThan, lim)
+	olderThan := paginate(r.URL.Query())
+	topics, err := store.Topics(olderThan, 50)
 	if err != nil {
 		Render500(w, err)
 		return
 	}
 
-	var next int64
+	var nextpage int64
 	if len(topics) > 0 {
-		next = topics[len(topics)-1].Updated.Unix()
+		nextpage = topics[len(topics)-1].Updated.Unix()
 	}
 
 	c := struct {
-		Topics      []*Topic
+		Topics      []*TopicWithUser
+		CurrPageOff int64
 		NextPageOff int64
 	}{
 		Topics:      topics,
-		NextPageOff: next,
+		CurrPageOff: olderThan.Unix(),
+		NextPageOff: nextpage,
 	}
 	Render(w, http.StatusOK, "page-topic-list", c)
 }
@@ -166,29 +168,30 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	olderThan, lim := paginate(r.URL.Query(), 50)
-	messages, err := store.TopicMessages(topic.TopicID, olderThan, lim)
+	p := NewPaginator(r.URL.Query(), 50, int(topic.Replies+1))
+	messages, err := store.TopicMessages(topic.TopicID, p.Offset(), p.Limit())
 	if err != nil {
 		Render500(w, err)
 		return
 	}
 
 	c := struct {
-		Topic    *Topic
-		Messages []*MessageWithUser
+		Topic     *Topic
+		Messages  []*MessageWithUser
+		Paginator *Paginator
 	}{
-		Topic:    topic,
-		Messages: messages,
+		Topic:     topic,
+		Messages:  messages,
+		Paginator: p,
 	}
 	Render(w, http.StatusOK, "page-message-list", c)
 }
 
-func paginate(q url.Values, pageSize uint) (time.Time, uint) {
-	var olderThan time.Time
-	if sec, err := strconv.Atoi(q.Get("off")); err == nil {
-		olderThan = time.Unix(int64(sec), 0)
-	} else {
-		olderThan = time.Now()
+const paginationQueryKey = "off"
+
+func paginate(q url.Values) time.Time {
+	if sec, err := strconv.Atoi(q.Get(paginationQueryKey)); err == nil {
+		return time.Unix(int64(sec), 0)
 	}
-	return olderThan, pageSize
+	return time.Now()
 }

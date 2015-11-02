@@ -16,6 +16,11 @@ type Topic struct {
 	Replies  uint      `db:"replies"`
 }
 
+type TopicWithUser struct {
+	Topic
+	User
+}
+
 type Message struct {
 	MessageID uint      `db:"message_id"`
 	AuthorID  uint      `db:"author_id"`

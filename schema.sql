@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS messages (
 	created    timestamptz NOT NULL
 );
 
+CREATE INDEX IF NOT EXISTS messages_created_idx ON messages(created);
+
 -- Update replies counter by counting all assigned messages and "updated" date
 CREATE OR REPLACE FUNCTION update_topic_on_messages_change()
 RETURNS TRIGGER AS

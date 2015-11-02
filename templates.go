@@ -45,17 +45,17 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		<hr>
 		{{if .Topics}}
 			<div>
-				<a href="./">&laquo; first page</a> | <a href="./?off={{.NextPageOff}}">next page &raquo;</a>
+				<a href="./">&laquo; first page</a>
+				| <a href="./?off={{.CurrPageOff}}">current page</a>
+				| <a href="./?off={{.NextPageOff}}">next page &rsaquo;</a>
 			</div>
 			{{range .Topics}}
 				<div>
 					<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
 					{{.Replies}}
+					by <em>{{.User.Name}}</em>
 				</div>
 			{{end}}
-			<div>
-				<a href="./">&laquo; first page</a> | <a href="./?off={{.NextPageOff}}">next page &raquo;</a>
-			</div>
 		{{else}}
 			<div>
 				no topics
@@ -93,6 +93,10 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 			<small>{{.Topic.Replies}}</small>
 		</h1>
 
+		<div>
+			{{template "pagination" .Paginator}}
+		</div>
+
 		{{range .Messages}}
 			<div id="message-{{.MessageID}}">
 				<strong>{{.User.Name}}</strong>
@@ -109,6 +113,33 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		</form>
 	</body>
 </html>
+{{end}}
+
+
+{{define "pagination"}}
+	{{if .IsFirst}}
+		<span>&laquo; first</span>
+	{{else}}
+		<a href="./?page={{.PrevPage}}">&laquo; first</a>
+	{{end}}
+	{{if .HasPrev}}
+		<a href="./?page={{.PrevPage}}">&lsaquo; previous</a>
+	{{else}}
+		<span>&lsaquo; previous</span>
+	{{end}}
+	[
+	{{.CurrentPage}}
+	]
+	{{if .HasNext}}
+		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
+	{{else}}
+		<span>next &rsaquo;</span>
+	{{end}}
+	{{if .IsLast}}
+		<span>last &raquo;</span>
+	{{else}}
+		<a href="./?page={{.LastPage}}">last &raquo;</a>
+	{{end}}
 {{end}}
 `))
 
