@@ -9,12 +9,20 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS topics (
 	topic_id   serial PRIMARY KEY,
 	title      text NOT NULL UNIQUE,
-	author_id  integer NOT NULL REFERENCES users(id),
+	author_id  integer NOT NULL REFERENCES users(user_id),
 	created    timestamptz NOT NULL,
 	updated    timestamptz NOT NULL,
 	replies    integer NOT NULL DEFAULT 0
 );
 
+
+CREATE TABLE IF NOT EXISTS messages (
+	message_id serial PRIMARY KEY,
+	topic_id    integer NOT NULL REFERENCES topics(topic_id),
+	author_id  integer NOT NULL REFERENCES users(user_id),
+	content    text NOT NULL,
+	created    timestamptz NOT NULL
+);
 
 -- Update replies counter by counting all assigned messages and "updated" date
 CREATE OR REPLACE FUNCTION update_topic_on_messages_change()
@@ -44,16 +52,6 @@ LANGUAGE plpgsql;
 DROP TRIGGER IF EXISTS update_topic_on_messages_change ON messages;
 CREATE TRIGGER update_topic_on_messages_change AFTER INSERT OR DELETE ON messages
     FOR EACH ROW EXECUTE PROCEDURE update_topic_on_messages_change();
-
-
-
-CREATE TABLE IF NOT EXISTS messages (
-	message_id serial PRIMARY KEY,
-	topicid    integer NOT NULL REFERENCES topics(id),
-	author_id  integer NOT NULL REFERENCES users(id),
-	content    text NOT NULL,
-	created    timestamptz NOT NULL
-);
 
 
 COMMIT;
