@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS topics (
 	replies    integer NOT NULL DEFAULT 0
 );
 
-CREATE INDEX IF NOT EXISTS topics_updated_idx ON topics(updated);
+CREATE INDEX topics_updated_idx ON topics(updated);
 
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS messages (
 	created    timestamptz NOT NULL
 );
 
-CREATE INDEX IF NOT EXISTS messages_created_idx ON messages(created);
+CREATE INDEX messages_created_idx ON messages(created);
 
 -- Update replies counter by counting all assigned messages and "updated" date
 CREATE OR REPLACE FUNCTION update_topic_on_messages_change()

@@ -49,7 +49,7 @@ func (s *store) Topics(updatedGte time.Time, limit uint) ([]*TopicWithUser, erro
 		SELECT t.*, u.*
 		FROM topics t
 			INNER JOIN users u ON t.author_id = u.user_id
-		WHERE t.updated <= $1
+		WHERE t.updated < $1
 		ORDER BY t.updated DESC LIMIT $2
 	`, updatedGte, limit)
 	return topics, transformErr(err)

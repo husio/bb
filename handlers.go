@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -84,26 +83,26 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	store := NewStore(DB(ctx))
 
-	olderThan := paginate(r.URL.Query())
-	topics, err := store.Topics(olderThan, 50)
+	p := NewSimplePagination(time.Now())
+	if sec, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil {
+		p.Current = int(sec)
+	}
+	topics, err := store.Topics(time.Unix(int64(p.Current), 0), p.Limit())
 	if err != nil {
 		Render500(w, err)
 		return
 	}
 
-	var nextpage int64
 	if len(topics) > 0 {
-		nextpage = topics[len(topics)-1].Updated.Unix()
+		p.Next = int(topics[len(topics)-1].Updated.Unix())
 	}
 
 	c := struct {
-		Topics      []*TopicWithUser
-		CurrPageOff int64
-		NextPageOff int64
+		Topics     []*TopicWithUser
+		Pagination *SimplePagination
 	}{
-		Topics:      topics,
-		CurrPageOff: olderThan.Unix(),
-		NextPageOff: nextpage,
+		Topics:     topics,
+		Pagination: p,
 	}
 	Render(w, http.StatusOK, "page-topic-list", c)
 }
@@ -168,7 +167,7 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	p := NewPaginator(r.URL.Query(), 50, int(topic.Replies+1))
+	p := NewPaginator(r.URL.Query(), int(topic.Replies+1))
 	messages, err := store.TopicMessages(topic.TopicID, p.Offset(), p.Limit())
 	if err != nil {
 		Render500(w, err)
@@ -185,13 +184,4 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		Paginator: p,
 	}
 	Render(w, http.StatusOK, "page-message-list", c)
-}
-
-const paginationQueryKey = "off"
-
-func paginate(q url.Values) time.Time {
-	if sec, err := strconv.Atoi(q.Get(paginationQueryKey)); err == nil {
-		return time.Unix(int64(sec), 0)
-	}
-	return time.Now()
 }

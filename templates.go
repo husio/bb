@@ -24,6 +24,7 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 <!DOCTYPE html>
 <html>
 <head>
+	<link rel="stylesheet" href="//necolas.github.io/normalize.css/3.0.2/normalize.css">
 {{end}}
 
 
@@ -41,26 +42,37 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{template "page-header" .}}
 	</head>
 	<body>
-		<a href="/t/">Create topic</a>
-		<hr>
-		{{if .Topics}}
-			<div>
-				<a href="./">&laquo; first page</a>
-				| <a href="./?off={{.CurrPageOff}}">current page</a>
-				| <a href="./?off={{.NextPageOff}}">next page &rsaquo;</a>
+		<div class="">
+			<div class="">
+				<a href="/t/">Create topic</a>
 			</div>
-			{{range .Topics}}
-				<div>
-					<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
-					{{.Replies}}
-					by <em>{{.User.Name}}</em>
-				</div>
-			{{end}}
-		{{else}}
-			<div>
-				no topics
+
+			<div class="">
+				{{if .Topics}}
+					<div class="">
+						{{template "simple-pagination" .Pagination}}
+					</div>
+
+					{{range .Topics}}
+						<div class="">
+							<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
+							{{.Replies}}
+							<a href="/t/{{.TopicID}}/{{.Title|slugify}}?page={{.Pages}}">last page</a>
+							by <em>{{.User.Name}}</em>
+							{{.Created}} &bull; {{.Updated}}
+						</div>
+					{{end}}
+
+					<div class="">
+						{{template "simple-pagination" .Pagination}}
+					</div>
+				{{else}}
+					<div class="">
+						no topics
+					</div>
+				{{end}}
 			</div>
-		{{end}}
+		</div>
 	</body>
 </html>
 {{end}}
@@ -70,15 +82,17 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{template "page-header" .}}
 	</head>
 	<body>
-		<form action="." method="POST" enctype="multipart/form-data">
-			<div>
-				<input type="text" name="title" required>
-			</div>
-			<div>
-				<textarea name="content" required></textarea>
-			</div>
-			<button type="submit">Create</button>
-		</form>
+		<div class="">
+			<form action="." method="POST" enctype="multipart/form-data" class="">
+				<fieldset>
+					<label for="title">Title</label>
+					<input type="text" name="title" id="title" class="" required>
+					<label for="content">Content</label>
+					<textarea name="content" id="content" class="" required></textarea>
+					<button type="submit">Create</button>
+				</fieldset>
+			</form>
+		</div>
 	</body>
 </html>
 {{end}}
@@ -88,29 +102,33 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{template "page-header" .}}
 	</head>
 	<body>
-		<h1>
-			{{.Topic.Title}}
-			<small>{{.Topic.Replies}}</small>
-		</h1>
+		<div class="">
+			<div class="">
+				<a href="/">Topics</a> &raquo;
+				{{.Topic.Title}}
+			</div>
 
-		<div>
-			{{template "pagination" .Paginator}}
+			<div class="">
+				{{template "pagination" .Paginator}}
+			</div>
+
+			{{range .Messages}}
+				<div id="message-{{.MessageID}}" class="">
+					<strong>{{.User.Name}}</strong>
+					{{.Message.Content}}
+					{{.Message.Created}}
+				</div>
+			{{end}}
+
+			<div  class="">
+				<form action="." method="POST" enctype="multipart/form-data">
+					<div>
+						<textarea name="content" required></textarea>
+					</div>
+					<button type="submit">Post</button>
+				</form>
+			</div>
 		</div>
-
-		{{range .Messages}}
-			<div id="message-{{.MessageID}}">
-				<strong>{{.User.Name}}</strong>
-				{{.Message.Content}}
-				{{.Message.Created}}
-			</div>
-		{{end}}
-
-		<form action="." method="POST" enctype="multipart/form-data">
-			<div>
-				<textarea name="content" required></textarea>
-			</div>
-			<button type="submit">Post</button>
-		</form>
 	</body>
 </html>
 {{end}}
@@ -120,16 +138,14 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{if .IsFirst}}
 		<span>&laquo; first</span>
 	{{else}}
-		<a href="./?page={{.PrevPage}}">&laquo; first</a>
+		<a href="./?page={{.FirstPage}}">&laquo; first</a>
 	{{end}}
 	{{if .HasPrev}}
 		<a href="./?page={{.PrevPage}}">&lsaquo; previous</a>
 	{{else}}
 		<span>&lsaquo; previous</span>
 	{{end}}
-	[
-	{{.CurrentPage}}
-	]
+	|
 	{{if .HasNext}}
 		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
 	{{else}}
@@ -141,6 +157,24 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 		<a href="./?page={{.LastPage}}">last &raquo;</a>
 	{{end}}
 {{end}}
+
+
+
+{{define "simple-pagination"}}
+	{{if .IsFirst}}
+		<span>&laquo; first</span>
+	{{else}}
+		<a href="./">&laquo; first</a>
+	{{end}}
+	|
+	{{if .HasNext}}
+		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
+	{{else}}
+		<span>next &rsaquo;</span>
+	{{end}}
+{{end}}
+
+
 `))
 
 func renderTo(w io.Writer, name string, context interface{}) error {

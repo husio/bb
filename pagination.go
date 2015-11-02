@@ -4,25 +4,26 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"time"
 )
+
+const PageSize = 25
 
 type Paginator struct {
 	page          int
-	pageSize      int
 	entitiesCount int
 	pagesCount    int
 }
 
-func NewPaginator(q url.Values, pageSize int, entities int) *Paginator {
+func NewPaginator(q url.Values, entities int) *Paginator {
 	page, _ := strconv.Atoi(q.Get("page"))
 	if page < 1 {
 		page = 1
 	}
 	return &Paginator{
 		page:          page,
-		pageSize:      pageSize,
 		entitiesCount: entities,
-		pagesCount:    int(math.Ceil(float64(entities) / float64(pageSize))),
+		pagesCount:    int(math.Ceil(float64(entities) / float64(PageSize))),
 	}
 }
 
@@ -51,7 +52,7 @@ func (p *Paginator) LastPage() int {
 }
 
 func (p *Paginator) HasNext() bool {
-	return p.entitiesCount > (p.page * p.pageSize)
+	return p.entitiesCount > (p.page * PageSize)
 }
 
 func (p *Paginator) NextPage() int {
@@ -67,9 +68,44 @@ func (p *Paginator) PrevPage() int {
 }
 
 func (p *Paginator) Offset() uint {
-	return uint((p.page - 1) * p.pageSize)
+	return uint((p.page - 1) * PageSize)
 }
 
 func (p *Paginator) Limit() uint {
-	return uint(p.pageSize)
+	return uint(PageSize)
+}
+
+type SimplePagination struct {
+	Current int
+	Next    int
+	now     int
+}
+
+func NewSimplePagination(now time.Time) *SimplePagination {
+	unix := int(now.Unix())
+	return &SimplePagination{
+		now:     unix,
+		Current: unix,
+		Next:    0,
+	}
+}
+
+func (p SimplePagination) CurrentPage() int {
+	return p.Current
+}
+
+func (p SimplePagination) IsFirst() bool {
+	return p.Current == p.now
+}
+
+func (p SimplePagination) HasNext() bool {
+	return p.Next != 0
+}
+
+func (p SimplePagination) NextPage() int {
+	return p.Next
+}
+
+func (p SimplePagination) Limit() uint {
+	return uint(PageSize)
 }

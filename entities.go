@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"math"
+	"time"
+)
 
 type User struct {
 	UserID uint64 `db:"user_id"`
@@ -14,6 +17,10 @@ type Topic struct {
 	Created  time.Time `db:"created"`
 	Updated  time.Time `db:"updated"`
 	Replies  uint      `db:"replies"`
+}
+
+func (t *Topic) Pages() uint {
+	return uint(math.Ceil(float64(t.Replies+1) / float64(PageSize)))
 }
 
 type TopicWithUser struct {
