@@ -6,19 +6,22 @@ CREATE TABLE IF NOT EXISTS users (
 	name     text NOT NULL UNIQUE
 );
 
+
 CREATE TABLE IF NOT EXISTS topics (
 	topic_id   serial PRIMARY KEY,
-	title      text NOT NULL UNIQUE,
+	title      text NOT NULL,
 	author_id  integer NOT NULL REFERENCES users(user_id),
 	created    timestamptz NOT NULL,
 	updated    timestamptz NOT NULL,
 	replies    integer NOT NULL DEFAULT 0
 );
 
+CREATE INDEX IF NOT EXISTS topics_updated_idx ON topics(updated);
+
 
 CREATE TABLE IF NOT EXISTS messages (
 	message_id serial PRIMARY KEY,
-	topic_id    integer NOT NULL REFERENCES topics(topic_id),
+	topic_id   integer NOT NULL REFERENCES topics(topic_id),
 	author_id  integer NOT NULL REFERENCES users(user_id),
 	content    text NOT NULL,
 	created    timestamptz NOT NULL
@@ -47,7 +50,6 @@ BEGIN
 END
 $$
 LANGUAGE plpgsql;
-
 
 DROP TRIGGER IF EXISTS update_topic_on_messages_change ON messages;
 CREATE TRIGGER update_topic_on_messages_change AFTER INSERT OR DELETE ON messages

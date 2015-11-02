@@ -43,10 +43,18 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	<body>
 		<a href="/t/">Create topic</a>
 		<hr>
-		{{range .Topics}}
+		{{if .Topics}}
 			<div>
-				<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
-				{{.Replies}}
+				<a href="./">&laquo; first page</a> | <a href="./?off={{.NextPageOff}}">next page &raquo;</a>
+			</div>
+			{{range .Topics}}
+				<div>
+					<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
+					{{.Replies}}
+				</div>
+			{{end}}
+			<div>
+				<a href="./">&laquo; first page</a> | <a href="./?off={{.NextPageOff}}">next page &raquo;</a>
 			</div>
 		{{else}}
 			<div>

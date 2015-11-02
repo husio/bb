@@ -43,11 +43,13 @@ func (s *store) UserByID(userID uint) (*User, error) {
 	return &u, transformErr(err)
 }
 
-func (s *store) Topics(limit, offset uint) ([]*Topic, error) {
+func (s *store) Topics(olderThan time.Time, limit uint) ([]*Topic, error) {
 	var topics []*Topic
 	err := s.db.Select(&topics, `
-		SELECT * FROM topics ORDER BY created DESC LIMIT $1 OFFSET $2
-	`, limit, offset)
+		SELECT * FROM topics
+		WHERE updated < $1
+		ORDER BY updated DESC LIMIT $2
+	`, olderThan, limit)
 	return topics, transformErr(err)
 }
 
@@ -67,14 +69,15 @@ func (s *store) TopicByID(topicID uint) (*Topic, error) {
 	return &t, transformErr(err)
 }
 
-func (s *store) TopicMessages(topicID, limit, offset uint) ([]*MessageWithUser, error) {
+func (s *store) TopicMessages(topicID uint, olderThan time.Time, limit uint) ([]*MessageWithUser, error) {
 	var messages []*MessageWithUser
 	err := s.db.Select(&messages, `
 		SELECT m.*, u.*
 		FROM messages m
 			INNER JOIN users u ON m.author_id = u.user_id
-		WHERE m.topic_id = $1 ORDER BY m.created ASC LIMIT $2 OFFSET $3
-	`, topicID, limit, offset)
+		WHERE m.topic_id = $1 AND m.created < $2
+		ORDER BY m.created ASC LIMIT $3
+	`, topicID, olderThan, limit)
 	return messages, transformErr(err)
 }
 

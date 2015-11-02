@@ -84,16 +84,24 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	store := NewStore(DB(ctx))
 
-	lim, off := paginate(r.URL.Query(), 50)
-	topics, err := store.Topics(lim, off)
+	olderThan, lim := paginate(r.URL.Query(), 50)
+	topics, err := store.Topics(olderThan, lim)
 	if err != nil {
 		Render500(w, err)
 		return
 	}
+
+	var next int64
+	if len(topics) > 0 {
+		next = topics[len(topics)-1].Updated.Unix()
+	}
+
 	c := struct {
-		Topics []*Topic
+		Topics      []*Topic
+		NextPageOff int64
 	}{
-		Topics: topics,
+		Topics:      topics,
+		NextPageOff: next,
 	}
 	Render(w, http.StatusOK, "page-topic-list", c)
 }
@@ -158,8 +166,8 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	lim, off := paginate(r.URL.Query(), 50)
-	messages, err := store.TopicMessages(topic.TopicID, lim, off)
+	olderThan, lim := paginate(r.URL.Query(), 50)
+	messages, err := store.TopicMessages(topic.TopicID, olderThan, lim)
 	if err != nil {
 		Render500(w, err)
 		return
@@ -175,10 +183,12 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 	Render(w, http.StatusOK, "page-message-list", c)
 }
 
-func paginate(q url.Values, pageSize uint) (limit, offset uint) {
-	page, _ := strconv.Atoi(q.Get("page"))
-	if page < 1 {
-		page = 1
+func paginate(q url.Values, pageSize uint) (time.Time, uint) {
+	var olderThan time.Time
+	if sec, err := strconv.Atoi(q.Get("off")); err == nil {
+		olderThan = time.Unix(int64(sec), 0)
+	} else {
+		olderThan = time.Now()
 	}
-	return pageSize, uint(page-1) * pageSize
+	return olderThan, pageSize
 }
