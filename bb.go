@@ -2,8 +2,10 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/context"
@@ -12,7 +14,9 @@ import (
 func ctxhandler(ctx context.Context, fn func(context.Context, http.ResponseWriter, *http.Request)) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		c := context.WithValue(ctx, "httprouter:params", ps)
+		start := time.Now()
 		fn(c, w, r)
+		fmt.Printf("%4s %-20s: work time: %s\n", r.Method, r.URL.Path, time.Now().Sub(start))
 	}
 }
 
