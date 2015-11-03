@@ -22,9 +22,13 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 
 {{define "page-header"}}
 <!DOCTYPE html>
+<html lang="en">
 <html>
 <head>
-	<link rel="stylesheet" href="//necolas.github.io/normalize.css/3.0.2/normalize.css">
+    <meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta http-equiv="x-ua-compatible" content="ie=edge">
+	<link rel="stylesheet" href="https://cdn.rawgit.com/twbs/bootstrap/v4-dev/dist/css/bootstrap.css">
 {{end}}
 
 
@@ -32,7 +36,15 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{template "page-header" .}}
 	</head>
 	<body>
-		{{.Text}}
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<div class="alert alert-danger" role="alert">
+						{{.Text}}
+					</div>
+				</div>
+			</div>
+		</div>
 	</body>
 	</html>
 {{end}}
@@ -42,36 +54,51 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{template "page-header" .}}
 	</head>
 	<body>
-		<div class="">
-			<div class="">
-				<a href="/t/">Create topic</a>
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<a href="/t/">Create topic</a>
+				</div>
 			</div>
 
-			<div class="">
-				{{if .Topics}}
-					<div class="">
+			{{if .Topics}}
+				<div class="row">
+					<div class="col-md-12">
 						{{template "simple-pagination" .Pagination}}
 					</div>
+				</div>
 
-					{{range .Topics}}
-						<div class="">
-							<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
-							{{.Replies}}
-							<a href="/t/{{.TopicID}}/{{.Title|slugify}}?page={{.Pages}}">last page</a>
-							by <em>{{.User.Name}}</em>
-							{{.Created}} &bull; {{.Updated}}
+				{{range .Topics}}
+					<div class="row">
+						<div class="row">
+							<div class="col-md-12">
+								<strong>
+									<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
+								</strong>
+							</div>
 						</div>
-					{{end}}
-
-					<div class="">
-						{{template "simple-pagination" .Pagination}}
-					</div>
-				{{else}}
-					<div class="">
-						no topics
+						<div class="row">
+							<div class="col-md-12">
+								By {{.User.Name}} - <span class="text-muted">{{.Replies}} replies - X views</span>
+								<a href="/t/{{.TopicID}}/{{.Title|slugify}}?page={{.Pages}}">last page</a>
+								<span class="pull-right">{{.Updated.Format "_2 Jan 2006"}}</span>
+							</div>
+						</div>
 					</div>
 				{{end}}
-			</div>
+
+				<div class="row">
+					<div class="col-md-12">
+						{{template "simple-pagination" .Pagination}}
+					</div>
+				</div>
+			{{else}}
+				<div class="row">
+					<div class="col-md-12">
+						no topics
+					</div>
+				</div>
+			{{end}}
 		</div>
 	</body>
 </html>
@@ -82,16 +109,20 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{template "page-header" .}}
 	</head>
 	<body>
-		<div class="">
-			<form action="." method="POST" enctype="multipart/form-data" class="">
-				<fieldset>
-					<label for="title">Title</label>
-					<input type="text" name="title" id="title" class="" required>
-					<label for="content">Content</label>
-					<textarea name="content" id="content" class="" required></textarea>
-					<button type="submit">Create</button>
-				</fieldset>
-			</form>
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<form action="." method="POST" enctype="multipart/form-data" class="">
+						<fieldset>
+							<label for="title">Title</label>
+							<input type="text" name="title" id="title" class="" required>
+							<label for="content">Content</label>
+							<textarea name="content" id="content" class="" required></textarea>
+							<button type="submit">Create</button>
+						</fieldset>
+					</form>
+				</div>
+			</div>
 		</div>
 	</body>
 </html>
@@ -102,31 +133,39 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	{{template "page-header" .}}
 	</head>
 	<body>
-		<div class="">
-			<div class="">
-				<a href="/">Topics</a> &raquo;
-				{{.Topic.Title}}
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<a href="/">Topics</a> &raquo;
+					{{.Topic.Title}}
+				</div>
 			</div>
 
-			<div class="">
-				{{template "pagination" .Paginator}}
+			<div class="row">
+				<div class="col-md-12">
+						{{template "pagination" .Paginator}}
+				</div>
 			</div>
 
 			{{range .Messages}}
-				<div id="message-{{.MessageID}}" class="">
-					<strong>{{.User.Name}}</strong>
-					{{.Message.Content}}
-					{{.Message.Created}}
+				<div class="row">
+					<div class="col-md-12" id="message-{{.MessageID}}">
+						<strong>{{.User.Name}}</strong>
+						{{.Message.Content}}
+						{{.Message.Created}}
+					</div>
 				</div>
 			{{end}}
 
-			<div  class="">
-				<form action="." method="POST" enctype="multipart/form-data">
-					<div>
-						<textarea name="content" required></textarea>
-					</div>
-					<button type="submit">Post</button>
-				</form>
+			<div class="row">
+				<div class="col-md-12">
+					<form action="." method="POST" enctype="multipart/form-data">
+						<div>
+							<textarea name="content" required></textarea>
+						</div>
+						<button type="submit">Post</button>
+					</form>
+				</div>
 			</div>
 		</div>
 	</body>

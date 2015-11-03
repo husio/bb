@@ -27,6 +27,7 @@ func Param(ctx context.Context, name string) string {
 
 func main() {
 	httpAddrFl := flag.String("addr", "localhost:8000", "HTTP server address")
+	staticsFl := flag.String("statics", "", "Optional static files directory")
 	flag.Parse()
 
 	ctx := context.Background()
@@ -42,6 +43,10 @@ func main() {
 	rt.POST("/t/", ctxhandler(ctx, handleCreateTopic))
 	rt.GET("/t/:topic/*ignore", ctxhandler(ctx, handleTopicMessages))
 	rt.POST("/t/:topic/*ignore", ctxhandler(ctx, handleCreateMessage))
+
+	if *staticsFl != "" {
+		rt.ServeFiles("/static/*filepath", http.Dir(*staticsFl))
+	}
 
 	log.Println("running server")
 	if err := http.ListenAndServe(*httpAddrFl, rt); err != nil {
