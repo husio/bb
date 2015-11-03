@@ -6,19 +6,9 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"regexp"
-	"strings"
 )
 
-var slugrx = regexp.MustCompile("[^a-z0-9]+")
-
-func slugify(s string) string {
-	return strings.Trim(slugrx.ReplaceAllString(strings.ToLower(s), "-"), "-")
-}
-
-var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-	"slugify": slugify,
-}).Parse(`
+var tmpl = template.Must(template.New("").Funcs(template.FuncMap{}).Parse(`
 
 {{define "page-header"}}
 <!DOCTYPE html>
@@ -73,14 +63,14 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 						<div class="row">
 							<div class="col-md-12">
 								<strong>
-									<a href="/t/{{.TopicID}}/{{.Title|slugify}}">{{.Title}}</a>
+									<a href="/t/{{.TopicID}}/{{.Slug}}/">{{.Title}}</a>
 								</strong>
 							</div>
 						</div>
 						<div class="row">
 							<div class="col-md-12">
 								By {{.User.Name}} - <span class="text-muted">{{.Replies}} replies - X views</span>
-								<a href="/t/{{.TopicID}}/{{.Title|slugify}}?page={{.Pages}}">last page</a>
+								<a href="/t/{{.TopicID}}/{{.Slug}}/?page={{.Pages}}">last page</a>
 								<span class="pull-right">{{.Updated.Format "_2 Jan 2006"}}</span>
 							</div>
 						</div>
@@ -113,13 +103,18 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 			<div class="row">
 				<div class="col-md-12">
 					<form action="." method="POST" enctype="multipart/form-data" class="">
-						<fieldset>
+						<fieldset class="form-group">
 							<label for="title">Title</label>
-							<input type="text" name="title" id="title" class="" required>
-							<label for="content">Content</label>
-							<textarea name="content" id="content" class="" required></textarea>
-							<button type="submit">Create</button>
+							<input class="form-control" type="text" name="title" id="title" class="" required>
 						</fieldset>
+						<fieldset class="form-group">
+							<label for="content">Content</label>
+							<textarea class="form-control" name="content" id="content" class="" required></textarea>
+						</fieldset>
+						<div class="pull-right">
+							<a href="/" class="btn btn-link" type="button">Back to main page</a>
+							<button class="btn btn-primary" type="submit">Submit</button>
+						</div>
 					</form>
 				</div>
 			</div>
@@ -149,7 +144,8 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 
 			{{range .Messages}}
 				<div class="row">
-					<div class="col-md-12" id="message-{{.MessageID}}">
+					<div class="col-md-12" id="m{{.MessageID}}">
+						<a href="./#m{{.MessageID}}">#{{.CollectionPos}}</a>
 						<strong>{{.User.Name}}</strong>
 						{{.Message.Content}}
 						{{.Message.Created}}
@@ -159,14 +155,29 @@ var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 
 			<div class="row">
 				<div class="col-md-12">
-					<form action="." method="POST" enctype="multipart/form-data">
-						<div>
-							<textarea name="content" required></textarea>
-						</div>
-						<button type="submit">Post</button>
-					</form>
+						{{template "pagination" .Paginator}}
 				</div>
 			</div>
+
+			{{if .Paginator.IsLast}}
+				<div class="row">
+					<div class="col-md-12">
+						<form action="." method="POST" enctype="multipart/form-data">
+							<fieldset class="form-group">
+								<textarea class="form-control" name="content" required></textarea>
+							</fieldset>
+							<button class="btn btn-primary-outline btn-sm pull-right" type="submit">Submit</button>
+						</form>
+					</div>
+				</div>
+			{{else}}
+				<div class="row">
+					<div class="col-md-4 col-md-offset-4 alert alert-info center">
+						Go to <a href="?page={{.Paginator.LastPage}}">last page</a> to comment.
+					</div>
+				</div>
+			{{end}}
+
 		</div>
 	</body>
 </html>

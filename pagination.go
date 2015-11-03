@@ -75,37 +75,45 @@ func (p *Paginator) Limit() uint {
 	return uint(PageSize)
 }
 
-type SimplePagination struct {
+func (p *Paginator) PageSize() uint {
+	return PageSize
+}
+
+type SimplePaginator struct {
 	Current int
 	Next    int
 	now     int
 }
 
-func NewSimplePagination(now time.Time) *SimplePagination {
+func NewSimplePaginator(now time.Time) *SimplePaginator {
 	unix := int(now.Unix())
-	return &SimplePagination{
+	return &SimplePaginator{
 		now:     unix,
 		Current: unix,
 		Next:    0,
 	}
 }
 
-func (p SimplePagination) CurrentPage() int {
+func (p SimplePaginator) CurrentPage() int {
 	return p.Current
 }
 
-func (p SimplePagination) IsFirst() bool {
+func (p SimplePaginator) IsFirst() bool {
 	return p.Current == p.now
 }
 
-func (p SimplePagination) HasNext() bool {
+func (p SimplePaginator) HasNext() bool {
 	return p.Next != 0
 }
 
-func (p SimplePagination) NextPage() int {
+func (p SimplePaginator) NextPage() int {
 	return p.Next
 }
 
-func (p SimplePagination) Limit() uint {
+func (p SimplePaginator) Limit() uint {
 	return uint(PageSize)
+}
+
+func (p *SimplePaginator) PageSize() uint {
+	return PageSize
 }

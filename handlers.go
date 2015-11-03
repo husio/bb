@@ -76,14 +76,14 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		Render500(w, err)
 		return
 	}
-	turl := fmt.Sprintf("/t/%d/%s", topic.TopicID, slugify(topic.Title))
+	turl := fmt.Sprintf("/t/%d/%s", topic.TopicID, topic.Slug())
 	http.Redirect(w, r, turl, http.StatusFound)
 }
 
 func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	store := NewStore(DB(ctx))
 
-	p := NewSimplePagination(time.Now())
+	p := NewSimplePaginator(time.Now())
 	if sec, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil {
 		p.Current = int(sec)
 	}
@@ -99,7 +99,7 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	c := struct {
 		Topics     []*TopicWithUser
-		Pagination *SimplePagination
+		Pagination *SimplePaginator
 	}{
 		Topics:     topics,
 		Pagination: p,
@@ -131,15 +131,39 @@ func handleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	store := NewStore(DB(ctx))
-	m, err := store.CreateMessage(uint(tid), uid, content, time.Now())
+	tx, err := DB(ctx).Beginx()
 	if err != nil {
-		Render404(w, err.Error())
+		Render500(w, err)
+		return
+	}
+	defer tx.Rollback()
+
+	store := NewStore(tx)
+
+	t, err := store.TopicByID(uint(tid))
+	if err != nil {
+		if err == ErrNotFound {
+			Render404(w, "Topic does not exist")
+		} else {
+			Render500(w, err)
+		}
 		return
 	}
 
-	// TODO redirect to message page
-	murl := fmt.Sprintf("/t/%d/#message-%d", m.TopicID, m.MessageID)
+	m, err := store.CreateMessage(t.TopicID, uid, content, time.Now())
+	if err != nil {
+		Render500(w, err)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		Render500(w, err)
+		return
+	}
+
+	murl := fmt.Sprintf(
+		"/t/%d/%s?page=%d#m%d",
+		t.TopicID, t.Slug(), t.Pages(), m.MessageID)
 	http.Redirect(w, r, murl, http.StatusFound)
 }
 
@@ -174,13 +198,28 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	type MessageWithUserPos struct {
+		*Message
+		*User
+		CollectionPos int // position number in messages collection
+	}
+
+	emsgs := make([]*MessageWithUserPos, 0, len(messages))
+	for i, m := range messages {
+		emsgs = append(emsgs, &MessageWithUserPos{
+			CollectionPos: i + (p.CurrentPage()-1)*int(p.PageSize()) + 1,
+			Message:       &m.Message,
+			User:          &m.User,
+		})
+	}
+
 	c := struct {
 		Topic     *Topic
-		Messages  []*MessageWithUser
+		Messages  []*MessageWithUserPos
 		Paginator *Paginator
 	}{
 		Topic:     topic,
-		Messages:  messages,
+		Messages:  emsgs,
 		Paginator: p,
 	}
 	Render(w, http.StatusOK, "page-message-list", c)

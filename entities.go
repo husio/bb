@@ -2,6 +2,8 @@ package main
 
 import (
 	"math"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -17,6 +19,17 @@ type Topic struct {
 	Created  time.Time `db:"created"`
 	Updated  time.Time `db:"updated"`
 	Replies  uint      `db:"replies"`
+}
+
+var slugrx = regexp.MustCompile("[^a-z0-9-]+")
+
+func (t *Topic) Slug() string {
+	s := t.Title
+	if len(s) > 140 {
+		s = s[:100]
+	}
+	s = slugrx.ReplaceAllString(strings.ToLower(s), "-")
+	return strings.Trim(s, "-")
 }
 
 func (t *Topic) Pages() uint {
