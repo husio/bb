@@ -28,7 +28,12 @@ func Param(ctx context.Context, name string) string {
 func main() {
 	httpAddrFl := flag.String("addr", "localhost:8000", "HTTP server address")
 	staticsFl := flag.String("statics", "", "Optional static files directory")
+	devFl := flag.Bool("dev", false, "Run application in developer mode")
 	flag.Parse()
+
+	if err := loadTemplates(*devFl); err != nil {
+		log.Fatalf("cannot load templates: %s", err)
+	}
 
 	ctx := context.Background()
 	ctx, err := WithPG(ctx, "user=bb password=bb dbname=bb sslmode=disable")

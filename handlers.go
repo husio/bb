@@ -27,7 +27,7 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	}
 
 	if r.Method == "GET" {
-		Render(w, http.StatusOK, "page-create-topic", c)
+		Render(w, http.StatusOK, "page_create_topic", c)
 		return
 	}
 
@@ -51,7 +51,7 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		c.ContentErr = "Content must be shorter than 10000 characters"
 	}
 	if c.TitleErr != "" || c.ContentErr != "" {
-		Render(w, http.StatusBadRequest, "page-create-topic", c)
+		Render(w, http.StatusBadRequest, "page_create_topic", c)
 		return
 	}
 
@@ -104,7 +104,7 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		Topics:     topics,
 		Pagination: p,
 	}
-	Render(w, http.StatusOK, "page-topic-list", c)
+	Render(w, http.StatusOK, "page_topic_list", c)
 }
 
 func handleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -222,5 +222,5 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		Messages:  emsgs,
 		Paginator: p,
 	}
-	Render(w, http.StatusOK, "page-message-list", c)
+	Render(w, http.StatusOK, "page_message_listn", c)
 }

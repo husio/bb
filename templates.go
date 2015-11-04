@@ -2,230 +2,87 @@ package main
 
 import (
 	"bytes"
-	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"os"
+	"sync"
+	"text/template"
+	"time"
 )
 
-var tmpl = template.Must(template.New("").Funcs(template.FuncMap{}).Parse(`
+var tmpl interface {
+	ExecuteTemplate(io.Writer, string, interface{}) error
+}
 
-{{define "page-header"}}
-<!DOCTYPE html>
-<html lang="en">
-<html>
-<head>
-    <meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta http-equiv="x-ua-compatible" content="ie=edge">
-	<link rel="stylesheet" href="https://cdn.rawgit.com/twbs/bootstrap/v4-dev/dist/css/bootstrap.css">
-{{end}}
+func loadTemplates(debug bool) error {
+	const tmplglob = "assets/templates/*html"
 
+	var err error
+	if debug {
+		tmpl, err = newDynamicTemplateLoader(tmplglob)
+	} else {
+		tmpl, err = template.ParseGlob(tmplglob)
+	}
+	return err
+}
 
-{{define "page-error"}}
-	{{template "page-header" .}}
-	</head>
-	<body>
-		<div class="container-fluid">
-			<div class="row">
-				<div class="col-md-12">
-					<div class="alert alert-danger" role="alert">
-						{{.Text}}
-					</div>
-				</div>
-			</div>
-		</div>
-	</body>
-	</html>
-{{end}}
+type dynamicTemplateLoader struct {
+	mu   sync.Mutex
+	glob string
+	t    *template.Template
+}
 
+func newDynamicTemplateLoader(glob string) (*dynamicTemplateLoader, error) {
+	t, err := template.ParseGlob(glob)
+	if err != nil {
+		return nil, err
+	}
+	dl := &dynamicTemplateLoader{
+		glob: glob,
+		t:    t,
+	}
+	go dl.hotUpdate()
+	return dl, nil
+}
 
-{{define "page-topic-list"}}
-	{{template "page-header" .}}
-	</head>
-	<body>
-		<div class="container-fluid">
-			<div class="row">
-				<div class="col-md-12">
-					<a href="/t/">Create topic</a>
-				</div>
-			</div>
+func (dl *dynamicTemplateLoader) hotUpdate() {
+	dir := dl.glob
+	for len(dir) > 0 && dir[len(dir)-1] != '/' {
+		dir = dir[:len(dir)-1]
+	}
+	if len(dir) == 0 {
+		panic("invalid directory")
+	}
 
-			{{if .Topics}}
-				<div class="row">
-					<div class="col-md-12">
-						{{template "simple-pagination" .Pagination}}
-					</div>
-				</div>
+	lastMod := time.Now()
+	for {
+		time.Sleep(2 * time.Second)
 
-				{{range .Topics}}
-					<div class="row">
-						<div class="row">
-							<div class="col-md-12">
-								<strong>
-									<a href="/t/{{.TopicID}}/{{.Slug}}/">{{.Title}}</a>
-								</strong>
-							</div>
-						</div>
-						<div class="row">
-							<div class="col-md-12">
-								By {{.User.Name}} - <span class="text-muted">{{.Replies}} replies - X views</span>
-								<a href="/t/{{.TopicID}}/{{.Slug}}/?page={{.Pages}}">last page</a>
-								<span class="pull-right">{{.Updated.Format "_2 Jan 2006"}}</span>
-							</div>
-						</div>
-					</div>
-				{{end}}
+		f, err := os.Stat(dir)
+		if err != nil {
+			log.Printf("cannot stat %q directory: %s", dir, err)
+			continue
+		}
 
-				<div class="row">
-					<div class="col-md-12">
-						{{template "simple-pagination" .Pagination}}
-					</div>
-				</div>
-			{{else}}
-				<div class="row">
-					<div class="col-md-12">
-						no topics
-					</div>
-				</div>
-			{{end}}
-		</div>
-	</body>
-</html>
-{{end}}
+		if mtime := f.ModTime(); mtime.After(lastMod) {
+			dl.mu.Lock()
+			if t, err := template.ParseGlob(dl.glob); err != nil {
+				log.Printf("cannot parse templates: %s", err)
+			} else {
+				dl.t = t
+			}
+			dl.mu.Unlock()
+			lastMod = mtime
+		}
+	}
+}
 
-
-{{define "page-create-topic"}}
-	{{template "page-header" .}}
-	</head>
-	<body>
-		<div class="container-fluid">
-			<div class="row">
-				<div class="col-md-12">
-					<form action="." method="POST" enctype="multipart/form-data" class="">
-						<fieldset class="form-group">
-							<label for="title">Title</label>
-							<input class="form-control" type="text" name="title" id="title" class="" required>
-						</fieldset>
-						<fieldset class="form-group">
-							<label for="content">Content</label>
-							<textarea class="form-control" name="content" id="content" class="" required></textarea>
-						</fieldset>
-						<div class="pull-right">
-							<a href="/" class="btn btn-link" type="button">Back to main page</a>
-							<button class="btn btn-primary" type="submit">Submit</button>
-						</div>
-					</form>
-				</div>
-			</div>
-		</div>
-	</body>
-</html>
-{{end}}
-
-
-{{define "page-message-list"}}
-	{{template "page-header" .}}
-	</head>
-	<body>
-		<div class="container-fluid">
-			<div class="row">
-				<div class="col-md-12">
-					<a href="/">Topics</a> &raquo;
-					{{.Topic.Title}}
-				</div>
-			</div>
-
-			<div class="row">
-				<div class="col-md-12">
-						{{template "pagination" .Paginator}}
-				</div>
-			</div>
-
-			{{range .Messages}}
-				<div class="row">
-					<div class="col-md-12" id="m{{.MessageID}}">
-						<a href="./#m{{.MessageID}}">#{{.CollectionPos}}</a>
-						<strong>{{.User.Name}}</strong>
-						{{.Message.Content}}
-						{{.Message.Created}}
-					</div>
-				</div>
-			{{end}}
-
-			<div class="row">
-				<div class="col-md-12">
-						{{template "pagination" .Paginator}}
-				</div>
-			</div>
-
-			{{if .Paginator.IsLast}}
-				<div class="row">
-					<div class="col-md-12">
-						<form action="." method="POST" enctype="multipart/form-data">
-							<fieldset class="form-group">
-								<textarea class="form-control" name="content" required></textarea>
-							</fieldset>
-							<button class="btn btn-primary-outline btn-sm pull-right" type="submit">Submit</button>
-						</form>
-					</div>
-				</div>
-			{{else}}
-				<div class="row">
-					<div class="col-md-4 col-md-offset-4 alert alert-info center">
-						Go to <a href="?page={{.Paginator.LastPage}}">last page</a> to comment.
-					</div>
-				</div>
-			{{end}}
-
-		</div>
-	</body>
-</html>
-{{end}}
-
-
-{{define "pagination"}}
-	{{if .IsFirst}}
-		<span>&laquo; first</span>
-	{{else}}
-		<a href="./?page={{.FirstPage}}">&laquo; first</a>
-	{{end}}
-	{{if .HasPrev}}
-		<a href="./?page={{.PrevPage}}">&lsaquo; previous</a>
-	{{else}}
-		<span>&lsaquo; previous</span>
-	{{end}}
-	|
-	{{if .HasNext}}
-		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
-	{{else}}
-		<span>next &rsaquo;</span>
-	{{end}}
-	{{if .IsLast}}
-		<span>last &raquo;</span>
-	{{else}}
-		<a href="./?page={{.LastPage}}">last &raquo;</a>
-	{{end}}
-{{end}}
-
-
-
-{{define "simple-pagination"}}
-	{{if .IsFirst}}
-		<span>&laquo; first</span>
-	{{else}}
-		<a href="./">&laquo; first</a>
-	{{end}}
-	|
-	{{if .HasNext}}
-		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
-	{{else}}
-		<span>next &rsaquo;</span>
-	{{end}}
-{{end}}
-
-
-`))
+func (dl *dynamicTemplateLoader) ExecuteTemplate(w io.Writer, name string, ctx interface{}) error {
+	dl.mu.Lock()
+	defer dl.mu.Unlock()
+	return dl.t.ExecuteTemplate(w, name, ctx)
+}
 
 func renderTo(w io.Writer, name string, context interface{}) error {
 	return tmpl.ExecuteTemplate(w, name, context)
@@ -243,7 +100,7 @@ func Render500(w http.ResponseWriter, err error) {
 		Text: http.StatusText(http.StatusInternalServerError),
 	}
 	w.WriteHeader(http.StatusInternalServerError)
-	renderTo(w, "page-error", ctx)
+	renderTo(w, "page_error", ctx)
 }
 
 func Render400(w http.ResponseWriter, text string) {
@@ -252,7 +109,7 @@ func Render400(w http.ResponseWriter, text string) {
 		Text: text,
 	}
 	w.WriteHeader(http.StatusBadRequest)
-	renderTo(w, "page-error", ctx)
+	renderTo(w, "page_error", ctx)
 }
 
 func Render404(w http.ResponseWriter, text string) {
@@ -261,7 +118,7 @@ func Render404(w http.ResponseWriter, text string) {
 		Text: text,
 	}
 	w.WriteHeader(http.StatusNotFound)
-	renderTo(w, "page-error", ctx)
+	renderTo(w, "page_error", ctx)
 }
 
 func Render(w http.ResponseWriter, code int, name string, context interface{}) {
@@ -274,7 +131,7 @@ func Render(w http.ResponseWriter, code int, name string, context interface{}) {
 			Code: code,
 			Text: http.StatusText(code),
 		}
-		if err := renderTo(&b, "page-error", ctx); err != nil {
+		if err := renderTo(&b, "page_error", ctx); err != nil {
 			panic(err)
 		}
 	}

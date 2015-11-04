@@ -1,0 +1,23 @@
+{{define "pagination"}}
+	{{if .IsFirst}}
+		<span>&laquo; first</span>
+	{{else}}
+		<a href="./?page={{.FirstPage}}">&laquo; first</a>
+	{{end}}
+	{{if .HasPrev}}
+		<a href="./?page={{.PrevPage}}">&lsaquo; previous</a>
+	{{else}}
+		<span>&lsaquo; previous</span>
+	{{end}}
+	|
+	{{if .HasNext}}
+		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
+	{{else}}
+		<span>next &rsaquo;</span>
+	{{end}}
+	{{if .IsLast}}
+		<span>last &raquo;</span>
+	{{else}}
+		<a href="./?page={{.LastPage}}">last &raquo;</a>
+	{{end}}
+{{end}}

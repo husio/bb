@@ -1,0 +1,27 @@
+{{define "page_create_topic"}}
+	{{template "page_header" .}}
+	</head>
+	<body>
+		<div class="container-fluid">
+			<div class="row">
+				<div class="col-md-12">
+					<form action="." method="POST" enctype="multipart/form-data" class="">
+						<fieldset class="form-group">
+							<label for="title">Title</label>
+							<input class="form-control" type="text" name="title" id="title" class="" required>
+						</fieldset>
+						<fieldset class="form-group">
+							<label for="content">Content</label>
+							<textarea class="form-control" name="content" id="content" class="" required></textarea>
+						</fieldset>
+						<div class="pull-right">
+							<a href="/" class="btn btn-link" type="button">Back to main page</a>
+							<button class="btn btn-primary" type="submit">Submit</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	</body>
+</html>
+{{end}}
