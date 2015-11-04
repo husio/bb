@@ -12,24 +12,42 @@
 
 			<div class="row">
 				<div class="col-md-12">
+					<div class="center-block">
 						{{template "pagination" .Paginator}}
+					</div>
 				</div>
 			</div>
 
 			{{range .Messages}}
-				<div class="row">
-					<div class="col-md-12" id="m{{.MessageID}}">
+				<hr class="invisible">
+
+				<div class="row" id="m{{.MessageID}}">
+					<div class="col-md-2">
+						<div class="pull-right">
+							{{.User.Login}}
+						</div>
+					</div>
+					<div class="col-md-8">
 						<a href="./#m{{.MessageID}}">#{{.CollectionPos}}</a>
-						<strong>{{.User.Name}}</strong>
+					</div>
+					<div class="col-md-2">
+						<div class="pull-right">
+							{{.Message.Created.Format "_2 Jan 2006"}}
+						</div>
+					</div>
+				</div>
+				<div class="row">
+					<div class="col-md-9 col-md-offset-2">
 						{{.Message.Content}}
-						{{.Message.Created}}
 					</div>
 				</div>
 			{{end}}
 
 			<div class="row">
 				<div class="col-md-12">
+					<div class="center-block">
 						{{template "pagination" .Paginator}}
+					</div>
 				</div>
 			</div>
 

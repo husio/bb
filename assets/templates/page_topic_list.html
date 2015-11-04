@@ -4,42 +4,54 @@
 	<body>
 		<div class="container-fluid">
 			<div class="row">
-				<div class="col-md-12">
+				<div class="col-md-8">
 					<a href="/t/">Create topic</a>
+				</div>
+				<div class="col-md-4">
+					<div class="pull-right">
+						{{if .Topics}}
+							{{template "simple_pagination" .Pagination}}
+						{{end}}
+					</div>
 				</div>
 			</div>
 
 			{{if .Topics}}
-				<div class="row">
-					<div class="col-md-12">
-						{{template "simple_pagination" .Pagination}}
-					</div>
-				</div>
-
-				{{range .Topics}}
-					<div class="row">
-						<div class="row">
-							<div class="col-md-12">
-								<strong>
-									<a href="/t/{{.TopicID}}/{{.Slug}}/">{{.Title}}</a>
-								</strong>
-							</div>
-						</div>
-						<div class="row">
-							<div class="col-md-12">
-								By {{.User.Name}} - <span class="text-muted">{{.Replies}} replies - X views</span>
-								<a href="/t/{{.TopicID}}/{{.Slug}}/?page={{.Pages}}">last page</a>
-								<span class="pull-right">{{.Updated.Format "_2 Jan 2006"}}</span>
-							</div>
-						</div>
-					</div>
-				{{end}}
-
-				<div class="row">
-					<div class="col-md-12">
-						{{template "simple_pagination" .Pagination}}
-					</div>
-				</div>
+				<table class="table">
+					<thead>
+						<tr>
+							<th>Topic</th>
+							<th>Category</th>
+							<th>Replies</th>
+							<th>Activity</th>
+						</tr>
+					</thead>
+					<tbody>
+					{{range .Topics}}
+						<tr>
+							<td>
+								<a href="/t/{{.TopicID}}/{{.Slug}}/">{{.Title}}</a>
+								{{if gt .Topic.Pages 1}}
+									<a href="/t/{{.TopicID}}/{{.Slug}}/?page={{.Pages}}">last page</a>
+								{{end}}
+								<small>by {{.User.Login}}</small>
+							</td>
+							<td>
+								<small>
+									<span class="label label-pill" style="background: #{{.Category.ColorHex}}">&nbsp;</span>
+									{{.Category.Name}}
+								</small>
+							</td>
+							<td class="text-muted">
+								{{.Replies}} replies - X views
+							</td>
+							<td>
+								{{.Updated.Format "_2 Jan 2006"}}
+							</td>
+						</tr>
+					{{end}}
+					</tbody>
+				</table>
 			{{else}}
 				<div class="row">
 					<div class="col-md-12">

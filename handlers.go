@@ -18,16 +18,23 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 		Render500(w, errors.New("not implemented"))
 		return
 	}
-
 	var c struct {
-		Title      string
-		TitleErr   string
-		Content    string
-		ContentErr string
+		Title       string
+		TitleErr    string
+		Category    uint
+		CategoryErr string
+		Categories  []*Category
+		Content     string
+		ContentErr  string
 	}
 
 	if r.Method == "GET" {
-		Render(w, http.StatusOK, "page_create_topic", c)
+		if cats, err := NewStore(DB(ctx)).Categories(); err != nil {
+			Render500(w, err)
+		} else {
+			c.Categories = cats
+			Render(w, http.StatusOK, "page_create_topic", c)
+		}
 		return
 	}
 
@@ -50,8 +57,23 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	if len(c.Content) > 10000 {
 		c.ContentErr = "Content must be shorter than 10000 characters"
 	}
-	if c.TitleErr != "" || c.ContentErr != "" {
-		Render(w, http.StatusBadRequest, "page_create_topic", c)
+	if raw := r.FormValue("category"); raw == "" {
+		c.CategoryErr = "Category is required"
+	} else {
+		if cat, err := strconv.Atoi(r.FormValue("category")); err == nil {
+			c.Category = uint(cat)
+		} else {
+			c.CategoryErr = "Invalid category"
+		}
+	}
+
+	if c.TitleErr != "" || c.ContentErr != "" || c.CategoryErr != "" {
+		if cats, err := NewStore(DB(ctx)).Categories(); err != nil {
+			Render500(w, err)
+		} else {
+			c.Categories = cats
+			Render(w, http.StatusBadRequest, "page_create_topic", c)
+		}
 		return
 	}
 
@@ -63,7 +85,7 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	defer tx.Rollback()
 	store := NewStore(tx)
 	now := time.Now()
-	topic, err := store.CreateTopic(c.Title, uid, now)
+	topic, err := store.CreateTopic(c.Title, uid, c.Category, now)
 	if err != nil {
 		Render500(w, err)
 		return
@@ -98,7 +120,7 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	c := struct {
-		Topics     []*TopicWithUser
+		Topics     []*TopicWithUserCategory
 		Pagination *SimplePaginator
 	}{
 		Topics:     topics,
@@ -222,5 +244,5 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		Messages:  emsgs,
 		Paginator: p,
 	}
-	Render(w, http.StatusOK, "page_message_listn", c)
+	Render(w, http.StatusOK, "page_message_list", c)
 }

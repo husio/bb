@@ -6,13 +6,24 @@
 			<div class="row">
 				<div class="col-md-12">
 					<form action="." method="POST" enctype="multipart/form-data" class="">
-						<fieldset class="form-group">
+                        <fieldset class="form-group {{if .TitleErr}}has-error{{end}}">
 							<label for="title">Title</label>
 							<input class="form-control" type="text" name="title" id="title" class="" required>
+                            {{if .TitleErr}}<div class="text-help">{{.TitleErr}}</div>{{end}}
 						</fieldset>
-						<fieldset class="form-group">
+						<fieldset class="form-group {{if .CategoryErr}}has-error{{end}}">
+							<label for="category">Category</label>
+                            <select name="category" class="form-control" id="category">
+                                {{range .Categories}}
+                                    <option value="{{.CategoryID}}">{{.Name}}</option>
+                                {{end}}
+                            </select>
+                            {{if .CategoryErr}}<div class="text-help">{{.CategoryErr}}</div>{{end}}
+                        </fieldset>
+						<fieldset class="form-group {{if .ContentErr}}has-error{{end}}">
 							<label for="content">Content</label>
 							<textarea class="form-control" name="content" id="content" class="" required></textarea>
+                            {{if .ContentErr}}<div class="text-help">{{.ContentErr}}</div>{{end}}
 						</fieldset>
 						<div class="pull-right">
 							<a href="/" class="btn btn-link" type="button">Back to main page</a>

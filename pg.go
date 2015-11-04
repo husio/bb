@@ -43,25 +43,26 @@ func (s *store) UserByID(userID uint) (*User, error) {
 	return &u, transformErr(err)
 }
 
-func (s *store) Topics(updatedGte time.Time, limit uint) ([]*TopicWithUser, error) {
-	var topics []*TopicWithUser
+func (s *store) Topics(updatedGte time.Time, limit uint) ([]*TopicWithUserCategory, error) {
+	var topics []*TopicWithUserCategory
 	err := s.db.Select(&topics, `
-		SELECT t.*, u.*
+		SELECT t.*, u.*, c.*
 		FROM topics t
 			INNER JOIN users u ON t.author_id = u.user_id
+			INNER JOIN categories c ON t.category_id = c.category_id
 		WHERE t.updated < $1
 		ORDER BY t.updated DESC LIMIT $2
 	`, updatedGte, limit)
 	return topics, transformErr(err)
 }
 
-func (s *store) CreateTopic(title string, author uint, now time.Time) (*Topic, error) {
+func (s *store) CreateTopic(title string, author, category uint, now time.Time) (*Topic, error) {
 	var t Topic
 	err := s.db.Get(&t, `
-		INSERT INTO topics (title, author_id, created, updated, replies)
-		VALUES ($1, $2, $3, $3, 0)
+		INSERT INTO topics (title, author_id, category_id, created, updated, replies)
+		VALUES ($1, $2, $3, $4, $4, 0)
 		RETURNING *
-	`, title, author, now)
+	`, title, author, category, now)
 	return &t, transformErr(err)
 }
 
@@ -91,6 +92,12 @@ func (s *store) CreateMessage(topic, author uint, content string, now time.Time)
 		RETURNING *
 	`, topic, author, content, now)
 	return &m, transformErr(err)
+}
+
+func (s *store) Categories() ([]*Category, error) {
+	var cats []*Category
+	err := s.db.Select(&cats, `SELECT * FROM categories LIMIT 1000`)
+	return cats, transformErr(err)
 }
 
 var (

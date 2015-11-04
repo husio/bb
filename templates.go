@@ -2,12 +2,12 @@ package main
 
 import (
 	"bytes"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"sync"
-	"text/template"
 	"time"
 )
 

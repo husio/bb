@@ -66,8 +66,8 @@ func upload(resource io.Reader, db *sqlx.DB, repeat int) {
 		for _, e := range feed.Entries {
 			var tid uint
 			err = tx.Get(&tid, `
-			INSERT INTO topics (title, author_id, created, updated)
-			VALUES ($1, $2, $3, $3)
+			INSERT INTO topics (title, author_id, created, updated, category_id)
+			VALUES ($1, $2, $3, $3, 1)
 			RETURNING topic_id
 		`, e.Title, 1, e.Updated)
 			if err != nil {

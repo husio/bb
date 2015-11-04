@@ -3,20 +3,58 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS users (
 	user_id  serial PRIMARY KEY,
-	name     text NOT NULL UNIQUE
+	login    text NOT NULL UNIQUE
 );
 
 
+CREATE TABLE IF NOT EXISTS categories (
+    category_id  serial PRIMARY KEY,
+    name         text NOT NULL,
+    description  text NOT NULL,
+    topics_count integer NOT NULL DEFAULT 0,
+    color        integer DEFAULT 16777215 -- RGB:255,255,255
+);
+
 CREATE TABLE IF NOT EXISTS topics (
-	topic_id   serial PRIMARY KEY,
-	title      text NOT NULL,
-	author_id  integer NOT NULL REFERENCES users(user_id),
-	created    timestamptz NOT NULL,
-	updated    timestamptz NOT NULL,
-	replies    integer NOT NULL DEFAULT 0
+	topic_id    serial PRIMARY KEY,
+	title       text NOT NULL,
+	author_id   integer NOT NULL REFERENCES users(user_id),
+    category_id integer NOT NULL REFERENCES categories(category_id),
+	created     timestamptz NOT NULL,
+	updated     timestamptz NOT NULL,
+	replies     integer NOT NULL DEFAULT 0
 );
 
 CREATE INDEX topics_updated_idx ON topics(updated);
+
+-- Update replies counter by inc/dec-rementing counter
+CREATE OR REPLACE FUNCTION update_category_on_topic_change()
+RETURNS TRIGGER AS
+$$
+BEGIN
+    IF (TG_OP = 'INSERT') THEN
+        UPDATE categories
+            SET
+                topics_count = (SELECT COUNT(*) FROM topics WHERE category_id = NEW.category_id)
+            WHERE category_id = NEW.category_id;
+        RETURN NEW;
+    END IF;
+
+    UPDATE categories
+        SET
+            topics_count = (SELECT COUNT(*) FROM topics WHERE category_id = OLD.category_id)
+        WHERE category_id = OLD.category_id;
+    RETURN OLD;
+
+END
+$$
+LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_category_on_topic_change ON topics;
+CREATE TRIGGER update_category_on_topic_change AFTER INSERT OR DELETE ON topics
+    FOR EACH ROW EXECUTE PROCEDURE update_category_on_topic_change();
+
+
 
 
 CREATE TABLE IF NOT EXISTS messages (
