@@ -1,4 +1,30 @@
 {{define "pagination"}}
+    <nav>
+        <ul class="pagination">
+            <li {{if .IsFirst}}class="disabled"{{end}}>
+                <a href="./page={{.PrevPage}}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                    <span class="sr-only">Previous</span>
+                </a>
+            </li>
+            {{with $root := .}}
+            {{range $p := $root.Pages}}
+                <li {{if eq $root.CurrentPage $p}}class="active"{{end}}><a href="./page={{$p}}">{{$p}}</a></li>
+            {{end}}
+            {{end}}
+            <li {{if .IsLast}}class="disabled"{{end}}>
+                <a href="./page={{.LastPage}}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                    <span class="sr-only">Next</span>
+                </a>
+            </li>
+        </ul>
+    </nav>
+
+
+
+
+
 	{{if .IsFirst}}
 		<span>&laquo; first</span>
 	{{else}}

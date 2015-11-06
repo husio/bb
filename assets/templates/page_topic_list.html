@@ -8,11 +8,9 @@
 					<a href="/t/">Create topic</a>
 				</div>
 				<div class="col-md-4">
-					<div class="pull-right">
-						{{if .Topics}}
-							{{template "simple_pagination" .Pagination}}
-						{{end}}
-					</div>
+                    {{if .Topics}}
+                        {{template "simple_pagination" .Pagination}}
+                    {{end}}
 				</div>
 			</div>
 
@@ -37,7 +35,7 @@
 								<small>by {{.User.Login}}</small>
 							</td>
 							<td>
-								<small>
+								<small title="{{.Category.Description}}">
 									<span class="label label-pill" style="background: #{{.Category.ColorHex}}">&nbsp;</span>
 									{{.Category.Name}}
 								</small>
@@ -52,6 +50,8 @@
 					{{end}}
 					</tbody>
 				</table>
+
+                {{template "simple_pagination" .Pagination}}
 			{{else}}
 				<div class="row">
 					<div class="col-md-12">

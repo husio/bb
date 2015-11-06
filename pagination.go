@@ -35,6 +35,14 @@ func (p *Paginator) PageCount() int {
 	return p.pagesCount
 }
 
+func (p *Paginator) Pages() []int {
+	pages := make([]int, p.pagesCount)
+	for i := range pages {
+		pages[i] = i + 1
+	}
+	return pages
+}
+
 func (p *Paginator) IsFirst() bool {
 	return p.page == 1
 }

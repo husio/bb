@@ -115,7 +115,8 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	if len(topics) > 0 {
+	// if there are less topics than the page size, then this is the last page
+	if len(topics) == PageSize {
 		p.Next = int(topics[len(topics)-1].Updated.Unix())
 	}
 

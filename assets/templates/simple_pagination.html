@@ -1,13 +1,16 @@
 {{define "simple_pagination"}}
-	{{if .IsFirst}}
-		<span>&laquo; first</span>
-	{{else}}
-		<a href="./">&laquo; first</a>
-	{{end}}
-	|
-	{{if .HasNext}}
-		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
-	{{else}}
-		<span>next &rsaquo;</span>
-	{{end}}
+	<nav>
+		<ul class="pager">
+			{{if .IsFirst}}
+				<li class="pager-prev disabled"><span>&laquo; first page</span></li>
+			{{else}}
+				<li class="pager-prev"><a href="./">&laquo; first page</a></li>
+			{{end}}
+			{{if .HasNext}}
+				<li class="pager-next"><a href="./?page={{.NextPage}}">next page &rsaquo;</a></li>
+			{{else}}
+				<li class="pager-next disabled"><span>next page &rsaquo;</span></li>
+			{{end}}
+		</ul>
+	</nav>
 {{end}}
