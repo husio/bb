@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"net/url"
 	"strconv"
@@ -35,10 +36,36 @@ func (p *Paginator) PageCount() int {
 	return p.pagesCount
 }
 
-func (p *Paginator) Pages() []int {
-	pages := make([]int, p.pagesCount)
-	for i := range pages {
-		pages[i] = i + 1
+type PagPage struct {
+	Number   int
+	Label    string
+	Disabled bool
+	Active   bool
+}
+
+func (p *Paginator) PagPages() []*PagPage {
+	var pages []*PagPage
+
+	pholder := false
+	for i := 1; i <= p.pagesCount; i++ {
+		if i < 3 || i+2 > p.pagesCount || i-3 < p.page && i+3 > p.page {
+			pages = append(pages, &PagPage{
+				Number:   i,
+				Label:    fmt.Sprintf("%d", i),
+				Disabled: false,
+				Active:   i == p.page,
+			})
+			pholder = false
+		} else {
+			if !pholder {
+				pages = append(pages, &PagPage{
+					Label:    "...",
+					Disabled: true,
+					Active:   false,
+				})
+			}
+			pholder = true
+		}
 	}
 	return pages
 }

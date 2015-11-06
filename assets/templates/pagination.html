@@ -1,49 +1,29 @@
 {{define "pagination"}}
     <nav>
-        <ul class="pagination">
+        <ul class="pagination pagination-sm">
             <li {{if .IsFirst}}class="disabled"{{end}}>
-                <a href="./page={{.PrevPage}}" aria-label="Previous">
+                <a href="./?page={{.PrevPage}}" title="Previous page" aria-label="Previous">
                     <span aria-hidden="true">&laquo;</span>
                     <span class="sr-only">Previous</span>
                 </a>
             </li>
-            {{with $root := .}}
-            {{range $p := $root.Pages}}
-                <li {{if eq $root.CurrentPage $p}}class="active"{{end}}><a href="./page={{$p}}">{{$p}}</a></li>
-            {{end}}
+            {{range .PagPages}}
+                {{if .Disabled}}
+                    <li>
+                        <span>{{.Label}}</span>
+                    </li>
+                {{else}}
+                    <li class="{{if .Active}}active{{end}}">
+                        <a href="./?page={{.Number}}">{{.Label}}</a>
+                    </li>
+                {{end}}
             {{end}}
             <li {{if .IsLast}}class="disabled"{{end}}>
-                <a href="./page={{.LastPage}}" aria-label="Next">
+                <a href="./?page={{.NextPage}}" title="Next page" aria-label="Next">
                     <span aria-hidden="true">&raquo;</span>
                     <span class="sr-only">Next</span>
                 </a>
             </li>
         </ul>
     </nav>
-
-
-
-
-
-	{{if .IsFirst}}
-		<span>&laquo; first</span>
-	{{else}}
-		<a href="./?page={{.FirstPage}}">&laquo; first</a>
-	{{end}}
-	{{if .HasPrev}}
-		<a href="./?page={{.PrevPage}}">&lsaquo; previous</a>
-	{{else}}
-		<span>&lsaquo; previous</span>
-	{{end}}
-	|
-	{{if .HasNext}}
-		<a href="./?page={{.NextPage}}">next &rsaquo;</a>
-	{{else}}
-		<span>next &rsaquo;</span>
-	{{end}}
-	{{if .IsLast}}
-		<span>last &raquo;</span>
-	{{else}}
-		<a href="./?page={{.LastPage}}">last &raquo;</a>
-	{{end}}
 {{end}}
