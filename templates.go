@@ -9,17 +9,22 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/russross/blackfriday"
 )
 
 var tmpl interface {
 	ExecuteTemplate(io.Writer, string, interface{}) error
 }
 
-func loadTemplates(debug bool) error {
+var tNoCache = devmode()
+
+func loadTemplates() error {
 	const tmplglob = "assets/templates/*html"
 
 	var err error
-	if debug {
+	if tNoCache {
 		tmpl, err = newDynamicTemplateLoader(tmplglob)
 	} else {
 		tmpl, err = template.ParseGlob(tmplglob)
@@ -34,7 +39,7 @@ type dynamicTemplateLoader struct {
 }
 
 func newDynamicTemplateLoader(glob string) (*dynamicTemplateLoader, error) {
-	t, err := template.ParseGlob(glob)
+	t, err := template.New("").Funcs(tmplFuncs).ParseGlob(glob)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +72,8 @@ func (dl *dynamicTemplateLoader) hotUpdate() {
 
 		if mtime := f.ModTime(); mtime.After(lastMod) {
 			dl.mu.Lock()
-			if t, err := template.ParseGlob(dl.glob); err != nil {
+			t := template.New("").Funcs(tmplFuncs)
+			if t, err := t.ParseGlob(dl.glob); err != nil {
 				log.Printf("cannot parse templates: %s", err)
 			} else {
 				dl.t = t
@@ -137,4 +143,14 @@ func Render(w http.ResponseWriter, code int, name string, context interface{}) {
 	}
 	w.WriteHeader(code)
 	b.WriteTo(w)
+}
+
+var tmplFuncs = template.FuncMap{
+	"markdown": markdown,
+}
+
+func markdown(s string) template.HTML {
+	unsafe := blackfriday.MarkdownCommon([]byte(s))
+	html := bluemonday.UGCPolicy().SanitizeBytes(unsafe)
+	return template.HTML(html)
 }

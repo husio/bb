@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -38,13 +39,16 @@ func Param(ctx context.Context, name string) string {
 	return ps.ByName(name)
 }
 
+func devmode() bool {
+	return os.Getenv("DEV") == "1"
+}
+
 func main() {
 	httpAddrFl := flag.String("addr", "localhost:8000", "HTTP server address")
 	staticsFl := flag.String("statics", "", "Optional static files directory")
-	devFl := flag.Bool("dev", false, "Run application in developer mode")
 	flag.Parse()
 
-	if err := loadTemplates(*devFl); err != nil {
+	if err := loadTemplates(); err != nil {
 		log.Fatalf("cannot load templates: %s", err)
 	}
 

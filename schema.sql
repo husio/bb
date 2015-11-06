@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS topics (
     category_id integer NOT NULL REFERENCES categories(category_id),
 	created     timestamptz NOT NULL,
 	updated     timestamptz NOT NULL,
-	replies     integer NOT NULL DEFAULT 0
+	replies     integer NOT NULL DEFAULT 0,
+    views       integer NOT NULL DEFAULT 0
 );
 
 CREATE INDEX topics_updated_idx ON topics(updated);

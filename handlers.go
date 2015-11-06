@@ -268,7 +268,12 @@ func handleListCategories(ctx context.Context, w http.ResponseWriter, r *http.Re
 	http.Error(w, "not implemented", http.StatusNotImplemented)
 }
 
+var httpNoCache = devmode()
+
 func checkLastModified(w http.ResponseWriter, r *http.Request, modtime time.Time) bool {
+	if httpNoCache {
+		return false
+	}
 	// https://golang.org/src/net/http/fs.go#L273
 	ms, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since"))
 	if err == nil && modtime.Before(ms.Add(1*time.Second)) {
