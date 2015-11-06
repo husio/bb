@@ -43,6 +43,16 @@ func (s *store) UserByID(userID uint) (*User, error) {
 	return &u, transformErr(err)
 }
 
+func (s *store) LastTopicUpdated(updatedGte time.Time) (time.Time, error) {
+	var t time.Time
+	err := s.db.Get(&t, `
+		SELECT updated FROM topics WHERE updated < $1
+		ORDER BY updated DESC
+		LIMIT 1
+	`, updatedGte)
+	return t, transformErr(err)
+}
+
 func (s *store) Topics(updatedGte time.Time, limit uint) ([]*TopicWithUserCategory, error) {
 	var topics []*TopicWithUserCategory
 	err := s.db.Select(&topics, `
@@ -66,9 +76,16 @@ func (s *store) CreateTopic(title string, author, category uint, now time.Time) 
 	return &t, transformErr(err)
 }
 
-func (s *store) TopicByID(topicID uint) (*Topic, error) {
-	var t Topic
-	err := s.db.Get(&t, `SELECT * FROM topics WHERE topic_id = $1`, topicID)
+func (s *store) TopicByID(topicID uint) (*TopicWithUserCategory, error) {
+	var t TopicWithUserCategory
+	err := s.db.Get(&t, `
+		SELECT t.*, u.*, c.*
+		FROM topics t
+			INNER JOIN users u ON t.author_id = u.user_id
+			INNER JOIN categories c ON t.category_id = c.category_id
+		WHERE topic_id = $1
+		LIMIT 1
+		`, topicID)
 	return &t, transformErr(err)
 }
 

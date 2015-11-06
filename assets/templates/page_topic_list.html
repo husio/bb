@@ -5,7 +5,7 @@
 		<div class="container-fluid">
 			<div class="row">
 				<div class="col-md-8">
-					<a href="/t/">Create topic</a>
+					<a class="btn btn-primary-outline" href="/nt/">New topic</a>
 				</div>
 				<div class="col-md-4">
                     {{if .Topics}}
@@ -28,9 +28,11 @@
 					{{range .Topics}}
 						<tr>
 							<td>
-								<a href="/t/{{.TopicID}}/{{.Slug}}/">{{.Title}}</a>
+								<a href="/t/{{.TopicID}}/{{.Topic.Slug}}/">{{.Title}}</a>
 								{{if gt .Topic.Pages 1}}
-									<a href="/t/{{.TopicID}}/{{.Slug}}/?page={{.Pages}}">last page</a>
+									<small>
+										&raquo; <a href="/t/{{.TopicID}}/{{.Topic.Slug}}/?page={{.Pages}}">last page</a>
+									</small>
 								{{end}}
 								<small>by {{.User.Login}}</small>
 							</td>

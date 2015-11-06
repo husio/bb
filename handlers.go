@@ -109,6 +109,14 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	if sec, err := strconv.Atoi(r.URL.Query().Get("page")); err == nil {
 		p.Current = int(sec)
 	}
+
+	if t, err := store.LastTopicUpdated(time.Unix(int64(p.Current), 0)); err != nil {
+		Render500(w, err)
+		return
+	} else if checkLastModified(w, r, t) {
+		return
+	}
+
 	topics, err := store.Topics(time.Unix(int64(p.Current), 0), p.Limit())
 	if err != nil {
 		Render500(w, err)
@@ -138,7 +146,7 @@ func handleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	tid, err := strconv.Atoi(Param(ctx, "topic"))
+	tid, err := strconv.Atoi(Param(ctx, "topicid"))
 	if err != nil || tid < 0 {
 		Render404(w, "Topic does not exist")
 		return
@@ -186,11 +194,11 @@ func handleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	murl := fmt.Sprintf(
 		"/t/%d/%s?page=%d#m%d",
-		t.TopicID, t.Slug(), t.Pages(), m.MessageID)
+		t.TopicID, t.Topic.Slug(), t.Pages(), m.MessageID)
 	http.Redirect(w, r, murl, http.StatusFound)
 }
 
-func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func handleListTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	tx, err := DB(ctx).Beginx()
 	if err != nil {
 		panic(err)
@@ -199,7 +207,7 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 
 	store := NewStore(tx)
 
-	topicID, err := strconv.Atoi(Param(ctx, "topic"))
+	topicID, err := strconv.Atoi(Param(ctx, "topicid"))
 	if err != nil || topicID < 0 {
 		Render404(w, "Topic does not exist")
 		return
@@ -211,6 +219,10 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 	if err != nil {
 		Render500(w, err)
+		return
+	}
+
+	if checkLastModified(w, r, topic.Updated) {
 		return
 	}
 
@@ -237,7 +249,7 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 	}
 
 	c := struct {
-		Topic     *Topic
+		Topic     *TopicWithUserCategory
 		Messages  []*MessageWithUserPos
 		Paginator *Paginator
 	}{
@@ -246,4 +258,26 @@ func handleTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Req
 		Paginator: p,
 	}
 	Render(w, http.StatusOK, "page_message_list", c)
+}
+
+func handleUserDetails(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "not implemented", http.StatusNotImplemented)
+}
+
+func handleListCategories(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "not implemented", http.StatusNotImplemented)
+}
+
+func checkLastModified(w http.ResponseWriter, r *http.Request, modtime time.Time) bool {
+	// https://golang.org/src/net/http/fs.go#L273
+	ms, err := time.Parse(http.TimeFormat, r.Header.Get("If-Modified-Since"))
+	if err == nil && modtime.Before(ms.Add(1*time.Second)) {
+		h := w.Header()
+		delete(h, "Content-Type")
+		delete(h, "Content-Length")
+		w.WriteHeader(http.StatusNotModified)
+		return true
+	}
+	w.Header().Set("Last-Modified", modtime.UTC().Format(http.TimeFormat))
+	return false
 }

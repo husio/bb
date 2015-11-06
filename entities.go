@@ -13,6 +13,10 @@ type User struct {
 	Login  string `db:"login"`
 }
 
+func (u *User) Slug() string {
+	return slugify(u.Login)
+}
+
 type Category struct {
 	CategoryID  uint   `db:"category_id"`
 	Name        string `db:"name"`
@@ -29,6 +33,10 @@ func (c *Category) SetColorHex(x string) {
 	panic("not implemented")
 }
 
+func (c *Category) Slug() string {
+	return slugify(c.Name)
+}
+
 type Topic struct {
 	TopicID    uint      `db:"topic_id"`
 	Title      string    `db:"title"`
@@ -39,15 +47,8 @@ type Topic struct {
 	Replies    uint      `db:"replies"`
 }
 
-var slugrx = regexp.MustCompile("[^a-z0-9-]+")
-
 func (t *Topic) Slug() string {
-	s := t.Title
-	if len(s) > 140 {
-		s = s[:100]
-	}
-	s = slugrx.ReplaceAllString(strings.ToLower(s), "-")
-	return strings.Trim(s, "-")
+	return slugify(t.Title)
 }
 
 func (t *Topic) Pages() uint {
@@ -72,3 +73,15 @@ type MessageWithUser struct {
 	Message
 	User
 }
+
+const maxSlugLen = 140
+
+func slugify(s string) string {
+	s = slugrx.ReplaceAllString(strings.ToLower(s), "-")
+	if len(s) > maxSlugLen {
+		s = s[:maxSlugLen]
+	}
+	return strings.Trim(s, "-")
+}
+
+var slugrx = regexp.MustCompile("[^a-z0-9-]+")

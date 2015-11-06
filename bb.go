@@ -5,18 +5,31 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
 	"golang.org/x/net/context"
 )
 
+type respwrt struct {
+	code int
+	http.ResponseWriter
+}
+
+func (w *respwrt) WriteHeader(code int) {
+	w.code = code
+	w.ResponseWriter.WriteHeader(code)
+}
+
 func ctxhandler(ctx context.Context, fn func(context.Context, http.ResponseWriter, *http.Request)) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		rw := &respwrt{code: http.StatusOK, ResponseWriter: w}
 		c := context.WithValue(ctx, "httprouter:params", ps)
 		start := time.Now()
-		fn(c, w, r)
-		fmt.Printf("%4s %-20s: work time: %s\n", r.Method, r.URL.Path, time.Now().Sub(start))
+		fn(c, rw, r)
+		path := r.URL.Path + strings.Repeat(".", 60-len(r.URL.Path))
+		fmt.Printf("%4s %d %s %s\n", r.Method, rw.code, path, time.Now().Sub(start))
 	}
 }
 
@@ -43,11 +56,18 @@ func main() {
 
 	rt := httprouter.New()
 	rt.RedirectTrailingSlash = true
+
+	// TODO - configurable?
 	rt.GET("/", ctxhandler(ctx, handleListTopics))
-	rt.GET("/t/", ctxhandler(ctx, handleCreateTopic))
-	rt.POST("/t/", ctxhandler(ctx, handleCreateTopic))
-	rt.GET("/t/:topic/*ignore", ctxhandler(ctx, handleTopicMessages))
-	rt.POST("/t/:topic/*ignore", ctxhandler(ctx, handleCreateMessage))
+
+	rt.POST("/nt/", ctxhandler(ctx, handleCreateTopic))
+	rt.GET("/nt/", ctxhandler(ctx, handleCreateTopic))
+
+	rt.GET("/t/", ctxhandler(ctx, handleListTopics))
+	rt.GET("/t/:topicid/:slug/", ctxhandler(ctx, handleListTopicMessages))
+	rt.POST("/t/:topicid/:slug/", ctxhandler(ctx, handleCreateMessage))
+	rt.GET("/c/", ctxhandler(ctx, handleListCategories))
+	rt.GET("/u/:userid/:slug/", ctxhandler(ctx, handleUserDetails))
 
 	if *staticsFl != "" {
 		rt.ServeFiles("/static/*filepath", http.Dir(*staticsFl))
