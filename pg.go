@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -53,16 +55,41 @@ func (s *store) LastTopicUpdated(updatedGte time.Time) (time.Time, error) {
 	return t, transformErr(err)
 }
 
-func (s *store) Topics(updatedGte time.Time, limit uint) ([]*TopicWithUserCategory, error) {
-	var topics []*TopicWithUserCategory
-	err := s.db.Select(&topics, `
-		SELECT t.*, u.*, c.*
-		FROM topics t
-			INNER JOIN users u ON t.author_id = u.user_id
-			INNER JOIN categories c ON t.category_id = c.category_id
-		WHERE t.updated < $1
-		ORDER BY t.updated DESC LIMIT $2
-	`, updatedGte, limit)
+func (s *store) Topics(
+	categories []int,
+	updatedGte time.Time,
+	limit uint,
+) ([]*TopicWithUserCategory, error) {
+	var (
+		topics []*TopicWithUserCategory
+		query  string
+	)
+
+	if len(categories) == 0 {
+		query = `
+			SELECT t.*, u.*, c.*
+			FROM topics t
+				INNER JOIN users u ON t.author_id = u.user_id
+				INNER JOIN categories c ON t.category_id = c.category_id
+			WHERE t.updated < $1
+			ORDER BY t.updated DESC LIMIT $2
+		`
+	} else {
+		var ids []string
+		for _, id := range categories {
+			ids = append(ids, fmt.Sprint(id))
+		}
+		query = fmt.Sprintf(`
+			SELECT t.*, u.*, c.*
+			FROM topics t
+				INNER JOIN users u ON t.author_id = u.user_id
+				INNER JOIN categories c ON t.category_id = c.category_id
+			WHERE t.updated < $1
+				AND t.category_id IN (%s)
+			ORDER BY t.updated DESC LIMIT $2
+		`, strings.Join(ids, ", "))
+	}
+	err := s.db.Select(&topics, query, updatedGte, limit)
 	return topics, transformErr(err)
 }
 

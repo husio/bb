@@ -119,7 +119,14 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	topics, err := store.Topics(time.Unix(int64(p.Current), 0), p.Limit())
+	var categories []int
+	for _, raw := range r.URL.Query()["category"] {
+		if id, err := strconv.Atoi(raw); err == nil {
+			categories = append(categories, id)
+		}
+	}
+
+	topics, err := store.Topics(categories, time.Unix(int64(p.Current), 0), p.Limit())
 	if err != nil {
 		Render500(w, err)
 		return
@@ -272,10 +279,13 @@ func handleListCategories(ctx context.Context, w http.ResponseWriter, r *http.Re
 	http.Error(w, "not implemented", http.StatusNotImplemented)
 }
 
+// URLQueryBuilder can build and return new URL query string by reusing values
+// from wrapped Reqeuest
 type URLQueryBuilder struct {
 	*http.Request
 }
 
+// With return URL query string from wrapped Request with given pairs added
 func (b URLQueryBuilder) With(pairs ...interface{}) template.URL {
 	if len(pairs)%2 != 0 {
 		log.Printf("odd number of arguments: %v", pairs)
@@ -288,6 +298,7 @@ func (b URLQueryBuilder) With(pairs ...interface{}) template.URL {
 	return template.URL(q.Encode())
 }
 
+// Without return URL query string from wrapped Request with given keys removed
 func (b URLQueryBuilder) Without(keys ...string) template.URL {
 	q := b.Request.URL.Query()
 	for _, k := range keys {
@@ -298,6 +309,9 @@ func (b URLQueryBuilder) Without(keys ...string) template.URL {
 
 var httpNoCache = devmode()
 
+// checkLastModified inspect HTTP header and if document did not changed,
+// StatusNotModified response is returned. Function return true if document was
+// not changed, false if response must be rendered.
 func checkLastModified(w http.ResponseWriter, r *http.Request, modtime time.Time) bool {
 	if httpNoCache {
 		return false
