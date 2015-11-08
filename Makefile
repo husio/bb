@@ -1,5 +1,5 @@
 build:
-	GO15VENDOREXPERIMENT=1 go build -o bb
+	GO15VENDOREXPERIMENT=1 go build -o bb cmd/bb/bb.go
 
 dev: build
 	DEV=1 ./bb

@@ -1,4 +1,4 @@
-package main
+package tmpl
 
 import (
 	"bytes"
@@ -18,9 +18,9 @@ var tmpl interface {
 	ExecuteTemplate(io.Writer, string, interface{}) error
 }
 
-var tNoCache = devmode()
+var tNoCache = os.Getenv("DEV") == "1"
 
-func loadTemplates() error {
+func LoadTemplates() error {
 	const tmplglob = "assets/templates/*html"
 
 	var err error

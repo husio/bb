@@ -1,4 +1,4 @@
-package main
+package forum
 
 import (
 	"errors"
@@ -6,18 +6,31 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/husio/bb/tmpl"
+	"github.com/julienschmidt/httprouter"
+
 	"golang.org/x/net/context"
 )
 
-func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func WithParams(ctx context.Context, ps httprouter.Params) context.Context {
+	return context.WithValue(ctx, "httprouter:params", ps)
+}
+
+func param(ctx context.Context, name string) string {
+	ps := ctx.Value("httprouter:params").(httprouter.Params)
+	return ps.ByName(name)
+}
+
+func HandleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	uid, ok := CurrentUserID(r)
 	if !ok {
 		// TODO - redirect to authentication page, but remember form content
-		Render500(w, errors.New("not implemented"))
+		tmpl.Render500(w, errors.New("not implemented"))
 		return
 	}
 	var c struct {
@@ -32,16 +45,16 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	if r.Method == "GET" {
 		if cats, err := NewStore(DB(ctx)).Categories(); err != nil {
-			Render500(w, err)
+			tmpl.Render500(w, err)
 		} else {
 			c.Categories = cats
-			Render(w, http.StatusOK, "page_create_topic", c)
+			tmpl.Render(w, http.StatusOK, "page_create_topic", c)
 		}
 		return
 	}
 
 	if err := r.ParseMultipartForm(2 << 20); err != nil {
-		Render400(w, err.Error())
+		tmpl.Render400(w, err.Error())
 		return
 	}
 	c.Content = strings.TrimSpace(r.FormValue("content"))
@@ -71,17 +84,17 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 	if c.TitleErr != "" || c.ContentErr != "" || c.CategoryErr != "" {
 		if cats, err := NewStore(DB(ctx)).Categories(); err != nil {
-			Render500(w, err)
+			tmpl.Render500(w, err)
 		} else {
 			c.Categories = cats
-			Render(w, http.StatusBadRequest, "page_create_topic", c)
+			tmpl.Render(w, http.StatusBadRequest, "page_create_topic", c)
 		}
 		return
 	}
 
 	tx, err := DB(ctx).Beginx()
 	if err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 	defer tx.Rollback()
@@ -89,22 +102,22 @@ func handleCreateTopic(ctx context.Context, w http.ResponseWriter, r *http.Reque
 	now := time.Now()
 	topic, err := store.CreateTopic(c.Title, uid, c.Category, now)
 	if err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 	if _, err := store.CreateMessage(topic.TopicID, uid, c.Content, now); err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 	if err := tx.Commit(); err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 	turl := fmt.Sprintf("/t/%d/%s", topic.TopicID, topic.Slug())
 	http.Redirect(w, r, turl, http.StatusFound)
 }
 
-func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func HandleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	store := NewStore(DB(ctx))
 
 	p := NewSimplePaginator(time.Now())
@@ -113,7 +126,7 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	}
 
 	if t, err := store.LastTopicUpdated(time.Unix(int64(p.Current), 0)); err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	} else if checkLastModified(w, r, t) {
 		return
@@ -128,7 +141,7 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 
 	topics, err := store.Topics(categories, time.Unix(int64(p.Current), 0), p.Limit())
 	if err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 
@@ -146,36 +159,36 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 		Pagination: p,
 		URLQuery:   URLQueryBuilder{r},
 	}
-	Render(w, http.StatusOK, "page_topic_list", c)
+	tmpl.Render(w, http.StatusOK, "page_topic_list", c)
 }
 
-func handleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func HandleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	uid, ok := CurrentUserID(r)
 	if !ok {
 		// TODO - redirect to authentication page, but remember form content
-		Render500(w, errors.New("not implemented"))
+		tmpl.Render500(w, errors.New("not implemented"))
 		return
 	}
 
-	tid, err := strconv.Atoi(Param(ctx, "topicid"))
+	tid, err := strconv.Atoi(param(ctx, "topicid"))
 	if err != nil || tid < 0 {
-		Render404(w, "Topic does not exist")
+		tmpl.Render404(w, "Topic does not exist")
 		return
 	}
 
 	content := strings.TrimSpace(r.FormValue("content"))
 	if len(content) < 3 {
-		Render400(w, "Message too short")
+		tmpl.Render400(w, "Message too short")
 		return
 	}
 	if len(content) > 20000 {
-		Render400(w, "Message too long")
+		tmpl.Render400(w, "Message too long")
 		return
 	}
 
 	tx, err := DB(ctx).Beginx()
 	if err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 	defer tx.Rollback()
@@ -185,21 +198,21 @@ func handleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Req
 	t, err := store.TopicByID(uint(tid))
 	if err != nil {
 		if err == ErrNotFound {
-			Render404(w, "Topic does not exist")
+			tmpl.Render404(w, "Topic does not exist")
 		} else {
-			Render500(w, err)
+			tmpl.Render500(w, err)
 		}
 		return
 	}
 
 	m, err := store.CreateMessage(t.TopicID, uid, content, time.Now())
 	if err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 
 	if err := tx.Commit(); err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 
@@ -209,7 +222,7 @@ func handleCreateMessage(ctx context.Context, w http.ResponseWriter, r *http.Req
 	http.Redirect(w, r, murl, http.StatusFound)
 }
 
-func handleListTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func HandleListTopicMessages(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	tx, err := DB(ctx).Beginx()
 	if err != nil {
 		panic(err)
@@ -218,18 +231,18 @@ func handleListTopicMessages(ctx context.Context, w http.ResponseWriter, r *http
 
 	store := NewStore(tx)
 
-	topicID, err := strconv.Atoi(Param(ctx, "topicid"))
+	topicID, err := strconv.Atoi(param(ctx, "topicid"))
 	if err != nil || topicID < 0 {
-		Render404(w, "Topic does not exist")
+		tmpl.Render404(w, "Topic does not exist")
 		return
 	}
 	topic, err := store.TopicByID(uint(topicID))
 	if err == ErrNotFound {
-		Render404(w, "Topic does not exist")
+		tmpl.Render404(w, "Topic does not exist")
 		return
 	}
 	if err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 
@@ -240,7 +253,7 @@ func handleListTopicMessages(ctx context.Context, w http.ResponseWriter, r *http
 	p := NewPaginator(r.URL.Query(), int(topic.Replies+1))
 	messages, err := store.TopicMessages(topic.TopicID, p.Offset(), p.Limit())
 	if err != nil {
-		Render500(w, err)
+		tmpl.Render500(w, err)
 		return
 	}
 
@@ -268,14 +281,14 @@ func handleListTopicMessages(ctx context.Context, w http.ResponseWriter, r *http
 		Messages:  emsgs,
 		Paginator: p,
 	}
-	Render(w, http.StatusOK, "page_message_list", c)
+	tmpl.Render(w, http.StatusOK, "page_message_list", c)
 }
 
-func handleUserDetails(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func HandleUserDetails(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "not implemented", http.StatusNotImplemented)
 }
 
-func handleListCategories(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+func HandleListCategories(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "not implemented", http.StatusNotImplemented)
 }
 
@@ -307,7 +320,7 @@ func (b URLQueryBuilder) Without(keys ...string) template.URL {
 	return template.URL(q.Encode())
 }
 
-var httpNoCache = devmode()
+var httpNoCache = os.Getenv("DEV") == "1"
 
 // checkLastModified inspect HTTP header and if document did not changed,
 // StatusNotModified response is returned. Function return true if document was
