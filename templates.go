@@ -27,7 +27,8 @@ func loadTemplates() error {
 	if tNoCache {
 		tmpl, err = newDynamicTemplateLoader(tmplglob)
 	} else {
-		tmpl, err = template.ParseGlob(tmplglob)
+		t := template.New("").Funcs(tmplFuncs)
+		tmpl, err = t.ParseGlob(tmplglob)
 	}
 	return err
 }

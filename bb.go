@@ -29,7 +29,7 @@ func ctxhandler(ctx context.Context, fn func(context.Context, http.ResponseWrite
 		c := context.WithValue(ctx, "httprouter:params", ps)
 		start := time.Now()
 		fn(c, rw, r)
-		path := r.URL.Path + strings.Repeat(".", 60-len(r.URL.Path))
+		path := r.URL.String() + strings.Repeat(".", 60-len(r.URL.String()))
 		fmt.Printf("%4s %d %s %s\n", r.Method, rw.code, path, time.Now().Sub(start))
 	}
 }

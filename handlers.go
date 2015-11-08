@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -131,9 +133,11 @@ func handleListTopics(ctx context.Context, w http.ResponseWriter, r *http.Reques
 	c := struct {
 		Topics     []*TopicWithUserCategory
 		Pagination *SimplePaginator
+		URLQuery   URLQueryBuilder
 	}{
 		Topics:     topics,
 		Pagination: p,
+		URLQuery:   URLQueryBuilder{r},
 	}
 	Render(w, http.StatusOK, "page_topic_list", c)
 }
@@ -266,6 +270,30 @@ func handleUserDetails(ctx context.Context, w http.ResponseWriter, r *http.Reque
 
 func handleListCategories(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "not implemented", http.StatusNotImplemented)
+}
+
+type URLQueryBuilder struct {
+	*http.Request
+}
+
+func (b URLQueryBuilder) With(pairs ...interface{}) template.URL {
+	if len(pairs)%2 != 0 {
+		log.Printf("odd number of arguments: %v", pairs)
+		panic("must provide even amount of arguments")
+	}
+	q := b.Request.URL.Query()
+	for i := 0; i < len(pairs); i += 2 {
+		q[fmt.Sprint(pairs[i])] = []string{fmt.Sprint(pairs[i+1])}
+	}
+	return template.URL(q.Encode())
+}
+
+func (b URLQueryBuilder) Without(keys ...string) template.URL {
+	q := b.Request.URL.Query()
+	for _, k := range keys {
+		delete(q, k)
+	}
+	return template.URL(q.Encode())
 }
 
 var httpNoCache = devmode()

@@ -9,7 +9,7 @@
 				</div>
 				<div class="col-md-4">
                     {{if .Topics}}
-                        {{template "simple_pagination" .Pagination}}
+                        {{template "topics_pagination" .}}
                     {{end}}
 				</div>
 			</div>
@@ -53,7 +53,7 @@
 					</tbody>
 				</table>
 
-                {{template "simple_pagination" .Pagination}}
+                {{template "topics_pagination" .}}
 			{{else}}
 				<div class="row">
 					<div class="col-md-12">
@@ -64,4 +64,22 @@
 		</div>
 	</body>
 </html>
+{{end}}
+
+
+{{define "topics_pagination"}}
+	<nav>
+		<ul class="pager">
+			{{if .Pagination.IsFirst}}
+				<li class="pager-prev disabled"><span>&laquo; first page</span></li>
+			{{else}}
+                <li class="pager-prev"><a href="./?{{.URLQuery.Without "page"}}">&laquo; first page</a></li>
+			{{end}}
+			{{if .Pagination.HasNext}}
+				<li class="pager-next"><a href="./?{{.URLQuery.With "page" .Pagination.NextPage}}">next page &rsaquo;</a></li>
+			{{else}}
+				<li class="pager-next disabled"><span>next page &rsaquo;</span></li>
+			{{end}}
+		</ul>
+	</nav>
 {{end}}
